@@ -4,3 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+cstr = "0.2.12"
+libc = "0.2"
+tray-icon = "0.24.2"
+winit = "0.30.13"
+image = "0.25"
