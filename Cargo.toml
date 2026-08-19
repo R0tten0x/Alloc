@@ -9,3 +9,6 @@ libc = "0.2"
 tray-icon = "0.24.2"
 winit = "0.30.13"
 image = "0.25"
+
+[package.metadata.bundle]
+identifier = "dev.rotten.Alloc"

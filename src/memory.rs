@@ -9,12 +9,24 @@ pub enum MemoryPressure {
 }
 
 impl MemoryPressure {
-    pub fn icon_path(&self) -> &'static str {
+    /// Returns the icon's raw PNG bytes, embedded into the binary at
+    /// compile time via include_bytes!.
+    ///
+    /// This used to return a runtime path ("assets/icons/...") that
+    /// load_icon() opened with image::open(). That worked under `cargo run`
+    /// (CWD = project root) but broke in the bundled .app: Finder launches
+    /// it with a different working directory, and `cargo bundle` doesn't
+    /// copy assets/ into the bundle in the first place, so the path never
+    /// resolved and the app panicked before the tray icon was ever created —
+    /// silently, since a GUI app launched from Finder has no terminal to
+    /// print the panic to. Embedding sidesteps both problems: there's no
+    /// path to resolve and nothing extra to bundle.
+    pub fn icon_bytes(&self) -> &'static [u8] {
         match self {
-            MemoryPressure::Normal => "assets/icons/memory-chip-green.png",
-            MemoryPressure::Warning => "assets/icons/memory-chip-yellow.png",
-            MemoryPressure::Critical => "assets/icons/memory-chip-red.png",
-            MemoryPressure::Unknown => "assets/icons/memory-chip-yellow.png",
+            MemoryPressure::Normal => include_bytes!("../assets/icons/memory-chip-green.png"),
+            MemoryPressure::Warning => include_bytes!("../assets/icons/memory-chip-yellow.png"),
+            MemoryPressure::Critical => include_bytes!("../assets/icons/memory-chip-red.png"),
+            MemoryPressure::Unknown => include_bytes!("../assets/icons/memory-chip-yellow.png"),
         }
     }
 }
@@ -80,13 +92,6 @@ pub fn poll_memory() -> Option<SystemMemoryInfo> {
         _ => MemoryPressure::Critical,
     };
 
-    // "used" here means total - free, i.e. free_count * page_size subtracted
-    // from hw.memsize. This is a simple, honest approximation — it's not
-    // the same "Memory Used" figure Activity Monitor shows, which further
-    // splits inactive/purgeable/compressed pages as reclaimable rather than
-    // truly free. Good enough for a menubar readout; revisit with
-    // host_statistics64 (vm_statistics64_data_t) if you need Activity
-    // Monitor-exact numbers later.
     let page_size = get_sysctl_i32("vm.pagesize").unwrap_or(4096) as u64;
     let free_pages = get_sysctl_i32("vm.page_free_count").unwrap_or(0) as u64;
     let free_bytes = free_pages * page_size;
